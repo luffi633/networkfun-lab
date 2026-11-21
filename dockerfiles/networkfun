@@ -1,0 +1,87 @@
+# ==========================================================
+# Lab Linux NetworkFun : un vrai Debian dans le navigateur
+# Image construite par le workflow « Deploy » de WebVM
+# ==========================================================
+FROM --platform=i386 i386/debian:bookworm
+
+ARG DEBIAN_FRONTEND=noninteractive
+
+# Les outils utilisés dans les cours
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      bash-completion ca-certificates locales \
+      nano vim-tiny less tree file man-db manpages manpages-fr \
+      sudo procps psmisc htop \
+      iproute2 dnsutils netcat-openbsd curl wget \
+      zip unzip tar gzip bzip2 rsync acl cron \
+      git python3 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Français
+RUN sed -i 's/^# *fr_FR.UTF-8/fr_FR.UTF-8/' /etc/locale.gen && locale-gen
+
+# L'utilisateur du lab : padawan (mot de passe padawan), membre de sudo
+RUN useradd -m -s /bin/bash -G sudo padawan \
+    && echo 'padawan:padawan' | chpasswd \
+    && echo 'root:networkfun' | chpasswd
+
+# ---------- Fichiers d'exercices ----------
+RUN mkdir -p /home/padawan/exercices/logs /home/padawan/exercices/textes /home/padawan/exercices/chasse \
+ && printf '%s\n' \
+  'Nov 20 08:01:12 srv sshd[812]: Accepted password for admin from 192.168.1.10 port 51022 ssh2' \
+  'Nov 20 08:15:44 srv sshd[901]: Failed password for root from 203.0.113.66 port 40112 ssh2' \
+  'Nov 20 08:15:47 srv sshd[901]: Failed password for root from 203.0.113.66 port 40114 ssh2' \
+  'Nov 20 08:15:51 srv sshd[905]: Failed password for invalid user test from 203.0.113.66 port 40120 ssh2' \
+  'Nov 20 09:02:03 srv sshd[1022]: Accepted publickey for padawan from 192.168.1.20 port 50211 ssh2' \
+  'Nov 20 09:30:10 srv sshd[1100]: Failed password for admin from 198.51.100.7 port 61002 ssh2' \
+  'Nov 20 10:12:33 srv sudo: padawan : TTY=pts/0 ; PWD=/home/padawan ; USER=root ; COMMAND=/usr/bin/apt update' \
+  > /home/padawan/exercices/logs/auth.log \
+ && printf '%s\n' 'nom;service;ville' 'alice;compta;Brest' 'bob;rh;Toulon' 'chloe;compta;Lyon' 'david;prod;Toulon' 'emma;rh;Brest' \
+  > /home/padawan/exercices/textes/employes.csv \
+ && printf '%s\n' 'Ceci est un fichier de test.' 'Linux est un système libre.' 'Le terminal est ton ami.' \
+  > /home/padawan/exercices/textes/notes.txt
+
+# ---------- La chasse au trésor ----------
+RUN cd /home/padawan/exercices/chasse \
+ && printf 'Bienvenue dans la chasse au trésor !\nIndice 1 : certains fichiers sont cachés. Liste TOUT le contenu de ce dossier.\n' > LISEZ-MOI.txt \
+ && printf 'Indice 2 : bien joué ! Le prochain indice est quelque part dans /home/padawan/exercices/chasse/niveau2. Utilise find pour chercher un fichier nommé "indice".\n' > .indice-cache \
+ && mkdir -p niveau2/a/b/c niveau2/x/y \
+ && printf 'Indice 3 : cherche le mot "TRESOR" dans tous les fichiers de /home/padawan/exercices/chasse/niveau3 (grep est ton ami).\n' > niveau2/a/b/c/indice \
+ && mkdir -p niveau3 \
+ && for i in $(seq 1 50); do printf 'rien ici %s\n' "$i" > niveau3/fichier$i.txt; done \
+ && printf 'TRESOR : presque ! Le coffre est dans /home/padawan/exercices/chasse/coffre, mais il est verrouillé. Donne-toi le droit de le lire (chmod).\n' > niveau3/fichier37.txt \
+ && mkdir coffre && printf 'Félicitations, padawan ! Tu maîtrises ls -a, find, grep et chmod.\nTape : echo "Je suis un vrai admin" > ~/victoire.txt\n' > coffre/tresor.txt \
+ && chmod 000 coffre/tresor.txt
+
+# ---------- Message d'accueil et commande « aide » ----------
+RUN printf '%s\n' \
+  '' \
+  '   >_ NetworkFun - Lab Linux' \
+  '   --------------------------' \
+  '   Tu es sur un vrai Debian, dans ton navigateur.' \
+  '   Tape "aide" pour voir les exercices et la chasse au trésor.' \
+  '   Rien de ce que tu fais ici ne peut casser ton PC.' \
+  '' > /etc/motd \
+ && printf '%s\n' '#!/bin/bash' \
+  'cat <<FIN' \
+  '' \
+  'Commandes utiles : pwd, ls -la, cd, cat, less, nano, man, grep, find, chmod' \
+  '' \
+  'Exercices :   cd ~/exercices && ls' \
+  '  logs/auth.log      -> s entrainer avec grep, cut, sort, uniq, wc' \
+  '  textes/            -> fichiers CSV et texte' \
+  'Chasse au tresor : cd ~/exercices/chasse && cat LISEZ-MOI.txt' \
+  '' \
+  'Utilisateur : padawan (mot de passe : padawan). Compte root : mot de passe networkfun.' \
+  'Pour passer root : su -' \
+  'Limites : pas de ping (ICMP), pas d Internet, pas de systemd. Pour ca, utilise ta VM Debian.' \
+  'FIN' > /usr/local/bin/aide \
+ && chmod +x /usr/local/bin/aide \
+ && echo 'cat /etc/motd' >> /home/padawan/.bashrc \
+ && echo "PS1='\[\e[1;32m\]\u@networkfun\[\e[0m\]:\[\e[1;34m\]\w\[\e[0m\]\$ '" >> /home/padawan/.bashrc \
+ && chown -R padawan:padawan /home/padawan
+
+USER padawan
+WORKDIR /home/padawan/
+# Variables lues par WebVM
+ENV HOME="/home/padawan" TERM="xterm" USER="padawan" SHELL="/bin/bash" EDITOR="nano" LANG="fr_FR.UTF-8" LC_ALL="fr_FR.UTF-8"
+CMD [ "/bin/bash" ]
