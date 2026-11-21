@@ -15,7 +15,9 @@ RUN echo "deb [trusted=yes] http://archive.debian.org/debian buster main" > /etc
  && echo "deb [trusted=yes] http://archive.debian.org/debian-security buster/updates main" >> /etc/apt/sources.list
 
 # Les outils utilisés dans les cours
-RUN apt-get -o Acquire::Retries=5 update \
+# --security=insecure : sur les serveurs GitHub, le filtre seccomp de Docker
+# bloque les appels réseau des programmes 32 bits (socket : Function not implemented)
+RUN --security=insecure apt-get -o Acquire::Retries=5 update \
  && apt-get -o Acquire::Retries=5 install -y --no-install-recommends \
       bash-completion ca-certificates locales \
       nano vim-tiny less tree file man-db manpages \
