@@ -2,15 +2,23 @@
 # Lab Linux NetworkFun : un vrai Debian dans le navigateur
 # Image construite par le workflow « Deploy » de WebVM
 # ==========================================================
-FROM --platform=linux/386 docker.io/i386/debian:bookworm
+# Base Debian 10 « buster », comme les images officielles de WebVM :
+# le moteur CheerpX et les serveurs de GitHub gèrent mal les appels
+# système 32 bits des Debian plus récentes. Les commandes des cours
+# sont les mêmes ; les différences avec Debian 13 sont signalées dans les cours.
+FROM --platform=linux/386 docker.io/i386/debian:buster
 
 ARG DEBIAN_FRONTEND=noninteractive
+
+# Buster n'est plus maintenue : ses paquets sont sur les archives Debian
+RUN echo "deb [trusted=yes] http://archive.debian.org/debian buster main" > /etc/apt/sources.list \
+ && echo "deb [trusted=yes] http://archive.debian.org/debian-security buster/updates main" >> /etc/apt/sources.list
 
 # Les outils utilisés dans les cours
 RUN apt-get -o Acquire::Retries=5 update \
  && apt-get -o Acquire::Retries=5 install -y --no-install-recommends \
       bash-completion ca-certificates locales \
-      nano vim-tiny less tree file man-db manpages manpages-fr \
+      nano vim-tiny less tree file man-db manpages \
       sudo procps psmisc htop \
       iproute2 dnsutils netcat-openbsd curl wget \
       zip unzip tar gzip bzip2 rsync acl cron \
