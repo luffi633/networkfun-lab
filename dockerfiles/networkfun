@@ -2,12 +2,13 @@
 # Lab Linux NetworkFun : un vrai Debian dans le navigateur
 # Image construite par le workflow « Deploy » de WebVM
 # ==========================================================
-FROM --platform=i386 i386/debian:bookworm
+FROM --platform=linux/386 docker.io/i386/debian:bookworm
 
 ARG DEBIAN_FRONTEND=noninteractive
 
 # Les outils utilisés dans les cours
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get -o Acquire::Retries=5 update \
+ && apt-get -o Acquire::Retries=5 install -y --no-install-recommends \
       bash-completion ca-certificates locales \
       nano vim-tiny less tree file man-db manpages manpages-fr \
       sudo procps psmisc htop \
